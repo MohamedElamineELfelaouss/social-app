@@ -23,7 +23,7 @@ app.use(helmet());
 app.use(morgan("dev"));
 
 app.get("/", (req, res) => {
-  res.send("welcome to social app API");
+  res.send("welcome to social app API\n");
 });
 
 app.listen(PORT, () => console.log(`server is running under port ${PORT}`));
