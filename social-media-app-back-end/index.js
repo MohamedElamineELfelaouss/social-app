@@ -7,6 +7,7 @@ const morgan = require("morgan");
 // import routes
 const authRoutes = require("./src/routes/authRoutes");
 const postRoutes = require("./src/routes/postRoutes");
+const commentRoutes = require("./src/routes/commentRoutes");
 
 const PORT = process.env.PORT || 5000;
 const app = express();
@@ -31,5 +32,7 @@ app.use("/api/auth", authRoutes);
 
 // posts
 app.use("/api/posts", postRoutes);
+//comments
+app.use("/api/comments", commentRoutes);
 
 app.listen(PORT, () => console.log(`server is running under port ${PORT}`));
