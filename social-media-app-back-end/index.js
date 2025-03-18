@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
-const mongoose = require("mongoose");
+const authRoutes = require("./src/routes/authRoutes");
 const PORT = process.env.PORT || 5000;
 const app = express();
 
@@ -22,8 +22,7 @@ app.use(helmet());
 
 app.use(morgan("dev"));
 
-app.get("/", (req, res) => {
-  res.send("welcome to social app API\n");
-});
+// auth
+app.use("/api/auth", authRoutes);
 
 app.listen(PORT, () => console.log(`server is running under port ${PORT}`));
