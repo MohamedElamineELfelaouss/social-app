@@ -128,7 +128,7 @@ const Navbar: React.FC = () => {
                   >
                     <Bell size={18} style={{ color: theme.colors.foreground }} />
                     {notifications > 0 && (
-                      <span className="absolute top-0 right-0 block h-4 w-4 rounded-full text-xs text-white font-bold items-center justify-center bg-red-500">
+                      <span className="absolute top-0 right-0 block h-4 w-4 rounded-full text-xs text-white font-bold flex items-center justify-center bg-red-500">
                         {notifications}
                       </span>
                     )}
