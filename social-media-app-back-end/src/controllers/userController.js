@@ -1,5 +1,6 @@
 const User = require("../models/User");
-
+const Post = require("../models/Post");
+const Comment = require("../models/Comment");
 // Follow a user
 exports.followUser = async (req, res) => {
   try {
@@ -116,6 +117,103 @@ exports.getSuggestedUsers = async (req, res) => {
     }).limit(5);
     res.json(suggestedUsers);
   } catch (error) {
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
+exports.getRecentActivity = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).populate(
+      "following",
+      "_id"
+    );
+    if (!user)
+      return res.status(404).json({ error: "Utilisateur introuvable" });
+    const followingIds = user.following.map((f) => f._id.toString());
+
+    // Fetch recent posts by followed users
+    const posts = await Post.find({ author: { $in: followingIds } })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate("author", "username avatar");
+
+    // Fetch recent likes on followed users' posts
+    const likes = await Post.find({
+      author: { $in: followingIds },
+      likes: { $ne: [] },
+    })
+      .sort({ updatedAt: -1 })
+      .limit(10)
+      .populate("likes", "username avatar")
+      .populate("author", "username avatar");
+
+    // Fetch recent comments on followed users' posts
+    const comments = await Comment.find({
+      post: { $in: posts.map((p) => p._id) },
+    })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate("author", "username avatar")
+      .populate("post", "content");
+
+    // Fetch recent follows
+    const follows = await User.find({ _id: { $in: followingIds } })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate("followers", "username avatar");
+
+    // Fetch recent mentions (if any user was tagged in a post)
+    const mentions = await Post.find({
+      content: new RegExp(`@${user.username}`, "i"),
+    })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate("author", "username avatar");
+
+    // Format the activities
+    const activities = [
+      ...posts.map((post) => ({
+        _id: post._id,
+        type: "post",
+        author: post.author,
+        post: { content: post.content },
+        createdAt: post.createdAt,
+      })),
+      ...likes.flatMap((post) =>
+        post.likes.map((likeUser) => ({
+          _id: `${post._id}-${likeUser._id}`,
+          type: "like",
+          author: likeUser,
+          post: { content: post.content },
+          createdAt: post.updatedAt,
+        }))
+      ),
+      ...comments.map((comment) => ({
+        _id: comment._id,
+        type: "comment",
+        author: comment.author,
+        post: { content: comment.post.content },
+        createdAt: comment.createdAt,
+      })),
+      ...follows.flatMap((user) =>
+        user.followers.map((follower) => ({
+          _id: `${user._id}-${follower._id}`,
+          type: "follow",
+          author: follower,
+          createdAt: user.createdAt,
+        }))
+      ),
+      ...mentions.map((post) => ({
+        _id: post._id,
+        type: "mention",
+        author: post.author,
+        post: { content: post.content },
+        createdAt: post.createdAt,
+      })),
+    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Sort by newest first
+
+    res.json(activities);
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Erreur serveur" });
   }
 };
