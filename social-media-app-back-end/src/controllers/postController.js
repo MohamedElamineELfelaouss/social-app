@@ -78,3 +78,19 @@ exports.getAllPosts = async (_req, res) => {
     res.status(500).json({ error: "server Error" });
   }
 };
+
+exports.getUserPosts = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const posts = await Post.find({ author: userId })
+      .populate("author", "username avatar")
+      .populate({
+        path: "comments",
+        populate: { path: "author", select: "username avatar" },
+      })
+      .sort({ createdAt: -1 });
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};

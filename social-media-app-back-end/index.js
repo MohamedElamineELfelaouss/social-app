@@ -3,17 +3,18 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const app = express();
+const PORT = process.env.PORT || 5000;
+// importing DB CONNECTION FROM CONFIG FILE
+const { connectDB } = require("./src/config/db");
 
 // import routes
 const authRoutes = require("./src/routes/authRoutes");
 const postRoutes = require("./src/routes/postRoutes");
 const commentRoutes = require("./src/routes/commentRoutes");
+const userRoutes = require("./src/routes/userRoutes.js");
 
-const PORT = process.env.PORT || 5000;
-const app = express();
 
-// importing DB CONNECTION FROM CONFIG FILE
-const { connectDB } = require("./src/config/db");
 // connecting to db
 connectDB();
 
@@ -34,5 +35,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
 //comments
 app.use("/api/comments", commentRoutes);
+// user
+app.use("/api/users", userRoutes);
 
 app.listen(PORT, () => console.log(`server is running under port ${PORT}`));
