@@ -99,7 +99,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
     setShowResults(false);
     if (onClose) onClose();
   };
-  
+
   return (
     <div ref={searchRef} className={`relative ${className}`}>
       <div className="relative">
@@ -217,6 +217,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                           {post.content}
                         </p>
                         <p className="text-xs" style={{ color: theme.colors.muted }}>
+                          {/* {console.log('Post author data:', post.author)} */}
                           by {post.author.username}
                         </p>
                       </div>
