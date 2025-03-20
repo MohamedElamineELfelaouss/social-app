@@ -9,12 +9,14 @@ const {
   getAllPosts,
   getUserPosts,
   getFeed,
+  getTrendingTopics,
 } = require("../controllers/postController");
 
 const router = express.Router();
 
-router.get("/feed", authenticate, getFeed);
 router.get("/", getAllPosts);
+router.get("/trending/topics", getTrendingTopics);
+router.get("/feed", authenticate, getFeed);
 router.post("/", authenticate, createPost);
 router.delete("/:postId", authenticate, deletePost);
 router.put("/:postId/like", authenticate, likePost);
