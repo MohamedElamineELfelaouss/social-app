@@ -14,7 +14,6 @@ const postRoutes = require("./src/routes/postRoutes");
 const commentRoutes = require("./src/routes/commentRoutes");
 const userRoutes = require("./src/routes/userRoutes.js");
 
-
 // connecting to db
 connectDB();
 

@@ -1,5 +1,5 @@
 const Post = require("../models/Post");
-
+const User = require("../models/User");
 // CREATE POST
 
 exports.createPost = async (req, res) => {
@@ -79,6 +79,7 @@ exports.getAllPosts = async (_req, res) => {
   }
 };
 
+// get posts by a specific user
 exports.getUserPosts = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -89,6 +90,33 @@ exports.getUserPosts = async (req, res) => {
         populate: { path: "author", select: "username avatar" },
       })
       .sort({ createdAt: -1 });
+    res.json(posts);
+  } catch (error) {
+    res.status(500).json({ error: "server error" });
+  }
+};
+
+// get the feed
+exports.getFeed = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // Récupérer l'utilisateur et la liste des utilisateurs qu'il suit
+    const user = await User.findById(userId);
+    if (!user)
+      return res.status(404).json({ error: "Utilisateur introuvable" });
+
+    // Récupérer les posts des utilisateurs suivis (exclut les posts de l'utilisateur lui-même)
+    const posts = await Post.find({
+      author: { $in: user.following },
+    })
+      .populate("author", "username avatar")
+      .populate({
+        path: "comments",
+        populate: { path: "author", select: "username avatar" },
+      })
+      .sort({ createdAt: -1 }); // Trier du plus récent au plus ancien
+
     res.json(posts);
   } catch (error) {
     res.status(500).json({ error: "Erreur serveur" });

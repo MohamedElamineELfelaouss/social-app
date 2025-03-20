@@ -8,10 +8,12 @@ const {
   likePost,
   getAllPosts,
   getUserPosts,
+  getFeed,
 } = require("../controllers/postController");
 
 const router = express.Router();
 
+router.get("/feed", authenticate, getFeed);
 router.get("/", getAllPosts);
 router.post("/", authenticate, createPost);
 router.delete("/:postId", authenticate, deletePost);
