@@ -10,7 +10,8 @@ exports.search = async (req, res) => {
     });
     const posts = await Post.find({
       content: new RegExp(query, "i"),
-    }).populate("author", "username avatar");
+    }).populate("author", "username avatar"); // populate to display the user of the post in search results
+    // Populate the author field in the posts to include user information
     res.json({ users, posts });
   } catch (error) {
     res.status(500).json({ error: "Server error" });

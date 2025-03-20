@@ -120,25 +120,26 @@ exports.getSuggestedUsers = async (req, res) => {
     res.status(500).json({ error: "Erreur serveur" });
   }
 };
+
 exports.getRecentActivity = async (req, res) => {
   try {
+    // Get current user and populate followers
     const user = await User.findById(req.user.userId).populate(
-      "following",
-      "_id"
+      "followers",
+      "username avatar createdAt"
     );
     if (!user)
       return res.status(404).json({ error: "Utilisateur introuvable" });
-    const followingIds = user.following.map((f) => f._id.toString());
 
-    // Fetch recent posts by followed users
-    const posts = await Post.find({ author: { $in: followingIds } })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .populate("author", "username avatar");
+    // Get all posts created by user
+    const myPosts = await Post.find({ author: user._id }).select(
+      "_id content createdAt updatedAt"
+    );
+    const myPostIds = myPosts.map((p) => p._id);
 
-    // Fetch recent likes on followed users' posts
-    const likes = await Post.find({
-      author: { $in: followingIds },
+    // Activity: Likes on my posts
+    const postsWithLikes = await Post.find({
+      author: user._id,
       likes: { $ne: [] },
     })
       .sort({ updatedAt: -1 })
@@ -146,22 +147,50 @@ exports.getRecentActivity = async (req, res) => {
       .populate("likes", "username avatar")
       .populate("author", "username avatar");
 
-    // Fetch recent comments on followed users' posts
+    const likeActivities = postsWithLikes.flatMap((post) =>
+      // Exclude self-likes
+      post.likes
+        .filter((likeUser) => likeUser._id.toString() !== user._id.toString())
+        .map((likeUser) => ({
+          _id: `${post._id}-${likeUser._id}`,
+          type: "like",
+          author: likeUser,
+          post: { content: post.content },
+          createdAt: post.updatedAt,
+        }))
+    );
+
+    // Activity: Comments on my posts
     const comments = await Comment.find({
-      post: { $in: posts.map((p) => p._id) },
+      post: { $in: myPostIds },
     })
       .sort({ createdAt: -1 })
       .limit(10)
       .populate("author", "username avatar")
       .populate("post", "content");
 
-    // Fetch recent follows
-    const follows = await User.find({ _id: { $in: followingIds } })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .populate("followers", "username avatar");
+    const commentActivities = comments
+      .filter(
+        (comment) => comment.author._id.toString() !== user._id.toString()
+      )
+      .map((comment) => ({
+        _id: comment._id,
+        type: "comment",
+        author: comment.author,
+        post: { content: comment.post.content },
+        createdAt: comment.createdAt,
+      }));
 
-    // Fetch recent mentions (if any user was tagged in a post)
+    //Activity: New followers (people who followed me)
+    // we may need to adjust the schema for follow events to get accurate timestamps.
+    const followActivities = user.followers.map((follower) => ({
+      _id: `${user._id}-${follower._id}`,
+      type: "follow",
+      author: follower,
+      createdAt: user.createdAt, //fetching data from the user object
+    }));
+
+    // Activity: Mentions (posts that tag me with @username)
     const mentions = await Post.find({
       content: new RegExp(`@${user.username}`, "i"),
     })
@@ -169,51 +198,25 @@ exports.getRecentActivity = async (req, res) => {
       .limit(10)
       .populate("author", "username avatar");
 
-    // Format the activities
+    const mentionActivities = mentions.map((post) => ({
+      _id: post._id,
+      type: "mention",
+      author: post.author,
+      post: { content: post.content },
+      createdAt: post.createdAt,
+    }));
+
+    // Combine and sort all activities by date (newest first)
     const activities = [
-      ...posts.map((post) => ({
-        _id: post._id,
-        type: "post",
-        author: post.author,
-        post: { content: post.content },
-        createdAt: post.createdAt,
-      })),
-      ...likes.flatMap((post) =>
-        post.likes.map((likeUser) => ({
-          _id: `${post._id}-${likeUser._id}`,
-          type: "like",
-          author: likeUser,
-          post: { content: post.content },
-          createdAt: post.updatedAt,
-        }))
-      ),
-      ...comments.map((comment) => ({
-        _id: comment._id,
-        type: "comment",
-        author: comment.author,
-        post: { content: comment.post.content },
-        createdAt: comment.createdAt,
-      })),
-      ...follows.flatMap((user) =>
-        user.followers.map((follower) => ({
-          _id: `${user._id}-${follower._id}`,
-          type: "follow",
-          author: follower,
-          createdAt: user.createdAt,
-        }))
-      ),
-      ...mentions.map((post) => ({
-        _id: post._id,
-        type: "mention",
-        author: post.author,
-        post: { content: post.content },
-        createdAt: post.createdAt,
-      })),
-    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Sort by newest first
+      ...likeActivities,
+      ...commentActivities,
+      ...followActivities,
+      ...mentionActivities,
+    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     res.json(activities);
   } catch (error) {
-    console.error(error);
+    console.error("Error fetching recent activity:", error);
     res.status(500).json({ error: "Erreur serveur" });
   }
 };
