@@ -7,10 +7,12 @@ const {
   unfollowUser,
   getUserFollowers,
   getUserFollowing,
+  getSuggestedUsers,
 } = require("../controllers/userController");
 
 const router = express.Router();
 
+router.get("/suggestions", authenticate, getSuggestedUsers);
 router.get("/:userId", getUser);
 router.put("/:userId", authenticate, updateUser);
 router.put("/:userId/follow", authenticate, followUser);
